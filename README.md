@@ -29,20 +29,73 @@ flutter pub get
 
 Setup uses the system `patch` command to create a Zoom wrapper under `.nosmai_zoom/` and adds a dependency override in your app. This lets the bridge attach the Nosmai camera before Zoom joins. Rebuild the native app after setup. On a clean CI checkout, run the same steps or restore the generated wrapper and its override together.
 
-## Connect the camera
+## Initialize, preview and join
 
-1. Initialize Zoom as usual. Request camera permission and call `await NosmaiFlutter.initialize(nosmaiLicenseKey)`. Continue when it returns `true`. The license must match your Android application ID or iOS bundle ID. Request microphone permission if the session uses the mic.
-2. Use `NosmaiCameraPreview` for the local video tile. When joining with the camera on, enable your Join action after the preview fires `onInitialized`. Keep the preview mounted while publishing, including when a remote participant fills the screen.
-3. Pass your existing `JoinSessionConfig` to the bridge. Use a session JWT issued by your backend and set `videoOptions['localVideoOn']` to `true` to publish on join.
+The local preview can appear before the user joins a room. Nosmai uses your app’s license to start the camera. The Zoom session JWT is needed when the user taps **Join**.
 
 ```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_zoom_videosdk/native/zoom_videosdk.dart';
+import 'package:nosmai_effects_sdk/nosmai_effects_sdk.dart';
 import 'package:nosmai_zoom_bridge/nosmai_zoom_bridge.dart';
+import 'package:permission_handler/permission_handler.dart';
+```
 
-// In the existing Join action, after the local preview is ready.
+### 1. Initialize Zoom once
+
+If your app already calls `zoom.initSdk(...)`, reuse that instance and its session event listener. Otherwise, initialize Zoom before joining with your app’s configuration. The example uses `await zoom.initSdk(InitConfig(domain: 'zoom.us', enableLog: false))` and checks the result. [Full initialization example](example/lib/main.dart)
+
+### 2. Start the Nosmai camera
+
+In your camera screen’s `State`, call `startLocalPreview` when the screen opens or the user taps **Start camera**. Pass a Nosmai license for the Android application ID or iOS bundle ID. This example uses `permission_handler` for camera access. Request microphone permission separately if the session uses the mic.
+
+```dart
+bool showLocalPreview = false;
+bool cameraReady = false;
+
+Future<void> startLocalPreview(String nosmaiLicenseKey) async {
+  final permission = await Permission.camera.request();
+  if (!permission.isGranted) throw StateError('Camera permission is required.');
+  if (!mounted) return;
+
+  final initialized = await NosmaiFlutter.initialize(nosmaiLicenseKey);
+  if (!initialized) throw StateError('Nosmai could not initialize. Check the license.');
+  if (mounted) setState(() => showLocalPreview = true);
+}
+```
+
+### 3. Show the local preview
+
+Call `buildLocalPreview()` where your screen displays the local camera tile. Nosmai owns the physical camera, so use this widget in place of Zoom’s local camera preview. Mount it as soon as `showLocalPreview` becomes true. Its `onInitialized` callback enables your **Join** action. At this point the user can see the camera and try effects locally.
+
+```dart
+Widget buildLocalPreview() {
+  if (!showLocalPreview) return const SizedBox.shrink();
+  return SizedBox(
+    height: 300,
+    child: NosmaiCameraPreview(
+      onInitialized: () {
+        if (mounted) setState(() => cameraReady = true);
+      },
+      onError: (message) {
+        if (!mounted) return;
+        setState(() => cameraReady = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      },
+    ),
+  );
+}
+```
+
+### 4. Publish when the user joins
+
+For a camera-on join, enable the button when `cameraReady` is true. Pass your existing `JoinSessionConfig` with the session JWT from your backend and `videoOptions: {'localVideoOn': true}`.
+
+```dart
 final result = await NosmaiZoomBridge.joinSession(config);
 ```
 
-Handle the result in your existing join flow. Zoom’s `onSessionJoin` event confirms the connection. For a two-step join, call `NosmaiZoomBridge.prepareJoin(config)`, then use Zoom’s `commitJoin()` or `cancelPrepareJoin()`.
+Handle the result in your existing join flow and use Zoom’s `onSessionJoin` event to confirm the connection. Keep `NosmaiCameraPreview` mounted while publishing, including when remote video fills the screen. Remote participants see the filtered camera through their normal Zoom video tile. If your app uses two-step join, call `NosmaiZoomBridge.prepareJoin(config)` followed by Zoom’s `commitJoin()` or `cancelPrepareJoin()`.
 
 ## Camera controls
 

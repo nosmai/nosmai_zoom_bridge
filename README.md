@@ -109,8 +109,4 @@ Handle the result in your existing join flow and use Zoom’s `onSessionJoin` ev
 - **iOS** apps using the pinned Nosmai beta can show a moving local preview while remote video freezes after returning from the background. Use a Nosmai Flutter SDK build with the iOS preview lifecycle fix for this flow.
 - **iOS thermal limits** cap publishing at 20 FPS under serious thermal pressure and 15 FPS under critical pressure. The bridge resumes Zoom’s negotiated rate when thermal pressure subsides.
 
-## Try the example
-
-Run the setup commands from `example/`, then run `flutter run`. Enter a Nosmai license for the example app and tap **Start camera**. Enter the session name and JWT, then tap **Join session**. Join the same room from a second device and toggle **Skin smoothing** to verify the remote video. [Example app](example/lib/main.dart)
-
 The native frame conversion uses libyuv. [License](ios/Classes/Yuv/LICENSE) · [Authors](ios/Classes/Yuv/AUTHORS) · [Patent grant](ios/Classes/Yuv/PATENTS)

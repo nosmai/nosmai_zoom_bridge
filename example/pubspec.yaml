@@ -1,0 +1,21 @@
+name: nosmai_zoom_example
+description: Publish a filtered camera in a Zoom Video SDK session.
+publish_to: none
+version: 0.1.0+1
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_zoom_videosdk: 2.6.0
+  nosmai_zoom_bridge:
+    path: ..
+  nosmai_effects_sdk:
+    git:
+      url: https://github.com/nosmai/nosmai_effects_sdk_flutter.git
+      ref: beta/2.0.3-beta.1
+  permission_handler: ^12.0.1
+dev_dependencies:
+  flutter_lints: ^5.0.0
+flutter:
+  uses-material-design: true

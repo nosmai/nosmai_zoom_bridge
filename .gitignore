@@ -1,0 +1,13 @@
+.dart_tool/
+.flutter-plugins-dependencies
+.nosmai_zoom/
+build/
+pubspec_overrides.yaml
+example/pubspec_overrides.yaml
+.idea/
+/.vscode/
+.DS_Store
+
+.cxx/
+.gradle/
+*.iml

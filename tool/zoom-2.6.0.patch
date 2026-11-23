@@ -1,0 +1,191 @@
+--- a/android/src/main/java/com/flutterzoom/videosdk/FlutterZoomVideoSdkPlugin.java
++++ b/android/src/main/java/com/flutterzoom/videosdk/FlutterZoomVideoSdkPlugin.java
+@@ -128,6 +128,7 @@
+   protected final String DEBUG_TAG = "ZoomVideoSdkDebug";
+   protected Display display;
+   protected DisplayMetrics displayMetrics;
++  private io.flutter.plugin.common.BinaryMessenger nosmaiMessenger;
+   private Result pendingResult;
+   private EventChannel.EventSink eventSink;
+ 
+@@ -167,6 +168,7 @@
+ 
+   @Override
+   public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
++    nosmaiMessenger = binding.getBinaryMessenger();
+     context = binding.getApplicationContext();
+     DisplayManager dm = (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
+     display = dm.getDisplay(Display.DEFAULT_DISPLAY);
+@@ -187,9 +189,11 @@
+       case "initSdk":
+         initSdk(call, result);
+         break;
++      case "nosmaiJoinSession":
+       case "joinSession":
+         joinSession(call, result);
+         break;
++      case "nosmaiPrepareJoin":
+       case "prepareJoin":
+         prepareJoin(call, result);
+         break;
+@@ -945,6 +949,19 @@
+ 
+   }
+ 
++  // Resolve the optional plugin once per join; camera delivery uses Zoom's typed source.
++  private boolean attachNosmaiSource(ZoomVideoSDKSessionContext session) {
++    try {
++      Class.forName("com.nosmai.zoom.NosmaiZoomSource")
++          .getMethod("configure", ZoomVideoSDKSessionContext.class, Object.class)
++          .invoke(null, session, nosmaiMessenger);
++      return true;
++    } catch (ReflectiveOperationException | LinkageError e) {
++      Log.e(DEBUG_TAG, "Nosmai external camera unavailable", e);
++      return false;
++    }
++  }
++
+   void joinSession(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
+ 
+     Map<String, Object> config = call.arguments();
+@@ -955,10 +972,20 @@
+     }
+ 
+     ZoomVideoSDKSessionContext sessionContext = buildSessionContext(config);
++    if (call.method.startsWith("nosmai")) {
++      if (!attachNosmaiSource(sessionContext)) {
++        result.error("nosmai_source_missing", "Install the Nosmai Zoom bridge on this engine", null);
++        return;
++      }
++    }
+     ZoomVideoSDK.getInstance().addListener(this);
+ 
+     try {
+       ZoomVideoSDKSession session = ZoomVideoSDK.getInstance().joinSession(sessionContext);
++      if (session == null && call.method.equals("nosmaiJoinSession")) {
++        result.error("joinSession_failure", "Zoom rejected the session context", null);
++        return;
++      }
+       result.success("Join Session Success");
+       Log.d(DEBUG_TAG, "Join Session successfully");
+     } catch (Exception e) {
+@@ -976,6 +1003,12 @@
+     }
+ 
+     ZoomVideoSDKSessionContext sessionContext = buildSessionContext(config);
++    if (call.method.startsWith("nosmai")) {
++      if (!attachNosmaiSource(sessionContext)) {
++        result.error("nosmai_source_missing", "Install the Nosmai Zoom bridge on this engine", null);
++        return;
++      }
++    }
+     ZoomVideoSDKPreJoinParam preJoinParam = new ZoomVideoSDKPreJoinParam();
+     if (config.get("timeoutInterval") != null) {
+       preJoinParam.timeoutInterval = (Integer) config.get("timeoutInterval");
+--- a/android/build.gradle
++++ b/android/build.gradle
+@@ -40,8 +40,8 @@
+     implementation "androidx.security:security-crypto:1.1.0-alpha06"
+     implementation "com.google.crypto.tink:tink-android:1.8.0"
+     implementation "androidx.appcompat:appcompat:1.6.1"
+-    implementation "us.zoom.videosdk:zoomvideosdk-core:2.6.0"
+-    implementation "us.zoom.videosdk:zoomvideosdk-videoeffects:2.6.0"
++    api "us.zoom.videosdk:zoomvideosdk-core:2.6.0"
++    // Nosmai supplies the camera effects and its own TensorFlow Lite GPU delegate.
+     implementation "us.zoom.videosdk:zoomvideosdk-annotation:2.6.0"
+     implementation "us.zoom.videosdk:zoomvideosdk-whiteboard:2.6.0"
+     implementation "us.zoom.videosdk:zoomvideosdk-broadcast-streaming:2.6.0"
+--- a/ios/Classes/FlutterZoomVideoSdkPlugin.m
++++ b/ios/Classes/FlutterZoomVideoSdkPlugin.m
+@@ -1,5 +1,6 @@
+ #import <ZoomVideoSdk/ZoomVideoSDK.h>
+ #import "FlutterZoomVideoSdkPlugin.h"
++#import <nosmai_zoom_bridge/NosmaiZoomBridgePlugin.h>
+ #import "JSONConvert.h"
+ #import "FlutterZoomVideoSdkSession.h"
+ #import "FlutterZoomVideoSdkUser.h"
+@@ -73,6 +74,10 @@
+ FlutterZoomVideoSdkSubSessionHelper* flutterZoomVideoSdkSubSessionHelper;
+ FlutterZoomVideoSdkVideoSettingHelper* flutterZoomVideoSdkVideoSettingHelper;
+ 
++- (void)detachFromEngineForRegistrar:(NSObject<FlutterPluginRegistrar> *)registrar {
++    [NosmaiZoomBridgePlugin detachOwner:self];
++}
++
+ - (dispatch_queue_t)methodQueue {
+     return dispatch_get_main_queue();
+ }
+@@ -80,6 +85,7 @@
+ + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
+     channel = [FlutterMethodChannel methodChannelWithName:@"flutter_zoom_videosdk" binaryMessenger:[registrar messenger]];
+     FlutterZoomVideoSdkPlugin* instance = [[FlutterZoomVideoSdkPlugin alloc] init];
++    [registrar publish:instance];
+     [registrar addMethodCallDelegate:instance channel:channel];
+     [registrar addApplicationDelegate:instance];
+     eventChannel = [FlutterEventChannel
+@@ -125,9 +131,9 @@
+ 
+     if ([@"initSdk" isEqualToString:call.method]) {
+         return [self initSDK:call withResult:result];
+-    } else if ([@"joinSession" isEqualToString:call.method]) {
++    } else if ([@"joinSession" isEqualToString:call.method] || [@"nosmaiJoinSession" isEqualToString:call.method]) {
+         return [self joinSession:call withResult:result];
+-    } else if ([@"prepareJoin" isEqualToString:call.method]) {
++    } else if ([@"prepareJoin" isEqualToString:call.method] || [@"nosmaiPrepareJoin" isEqualToString:call.method]) {
+         return [self prepareJoin:call withResult:result];
+     } else if ([@"commitJoin" isEqualToString:call.method]) {
+         return [self commitJoin:result];
+@@ -645,6 +651,9 @@
+ 
+ -(void) joinSession:(FlutterMethodCall *)call withResult:(FlutterResult) result {
+     ZoomVideoSDKSessionContext *sessionContext = [self buildSessionContext:call.arguments];
++    if ([call.method hasPrefix:@"nosmai"]) {
++        [NosmaiZoomBridgePlugin configureContext:sessionContext owner:self];
++    }
+ 
+     [ZoomVideoSDK shareInstance].delegate = self;
+ 
+@@ -656,6 +665,7 @@
+             result(@"Join Session Success");
+         }
+         else {
++            [NosmaiZoomBridgePlugin discardContext:sessionContext];
+             NSLog(@"join session error");
+             result(@"joinSession_failure");
+         }
+@@ -664,6 +674,9 @@
+ 
+ -(void) prepareJoin:(FlutterMethodCall *)call withResult:(FlutterResult) result {
+     ZoomVideoSDKSessionContext *sessionContext = [self buildSessionContext:call.arguments];
++    if ([call.method hasPrefix:@"nosmai"]) {
++        [NosmaiZoomBridgePlugin configureContext:sessionContext owner:self];
++    }
+ 
+     ZoomVideoSDKPreJoinParam *preJoinParam = [[ZoomVideoSDKPreJoinParam alloc] init];
+     id timeoutInterval = call.arguments[@"timeoutInterval"];
+@@ -681,6 +694,7 @@
+             result(@"Prepare Join Success");
+         }
+         else {
++            [NosmaiZoomBridgePlugin discardContext:sessionContext];
+             NSLog(@"prepare join error");
+             result(@"prepareJoin_failure");
+         }
+@@ -697,6 +711,7 @@
+ -(void) cancelPrepareJoin:(FlutterResult) result {
+     dispatch_async(dispatch_get_main_queue(), ^{
+         ZoomVideoSDKError ret = [[ZoomVideoSDK shareInstance] cancelPrepareJoin];
++        if (ret == Errors_Success) [NosmaiZoomBridgePlugin detachOwner:self];
+         result([[JSONConvert ZoomVideoSDKErrorValuesReversed] objectForKey: @(ret)]);
+     });
+ }
+--- a/ios/flutter_zoom_videosdk.podspec
++++ b/ios/flutter_zoom_videosdk.podspec
+@@ -16,6 +16,7 @@
+   s.source_files = 'Classes/**/*'
+   s.public_header_files = 'Classes/*.h'
+   s.dependency 'Flutter'
++  s.dependency 'nosmai_zoom_bridge'
+   s.dependency "ZoomVideoSDK/ZoomVideoSDK", '2.6.0'
+   s.dependency 'ZoomVideoSDK/zoomcml', '2.6.0'
+   s.dependency 'ZoomVideoSDK/CptShare', '2.6.0'

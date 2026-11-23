@@ -1,0 +1,26 @@
+group = 'com.nosmai.zoom'
+version = '0.1.0'
+buildscript {
+    repositories { google(); mavenCentral() }
+    dependencies { classpath 'com.android.tools.build:gradle:8.2.2' }
+}
+apply plugin: 'com.android.library'
+android {
+    namespace 'com.nosmai.zoom'
+    compileSdk 36
+    defaultConfig {
+        minSdk 28
+        ndk { abiFilters 'armeabi-v7a', 'arm64-v8a' }
+        consumerProguardFiles 'consumer-rules.pro'
+        externalNativeBuild { cmake { cppFlags '-std=c++17' } }
+    }
+    externalNativeBuild { cmake { path 'src/main/cpp/CMakeLists.txt' } }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
+dependencies {
+    compileOnly 'us.zoom.videosdk:zoomvideosdk-core:2.6.0'
+    compileOnly 'com.nosmai:nosmai-sdk:3.0.8-beta.1@aar'
+}

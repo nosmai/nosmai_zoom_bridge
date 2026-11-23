@@ -1,0 +1,78 @@
+PODS:
+  - Flutter (1.0.0)
+  - flutter_zoom_videosdk (0.0.1):
+    - Flutter
+    - nosmai_zoom_bridge
+    - ZoomVideoSDK/CptShare (= 2.6.0)
+    - ZoomVideoSDK/util (= 2.6.0)
+    - ZoomVideoSDK/Whiteboard (= 2.6.0)
+    - ZoomVideoSDK/zContext (= 2.6.0)
+    - ZoomVideoSDK/zm_annoter_dynamic (= 2.6.0)
+    - ZoomVideoSDK/zoomcml (= 2.6.0)
+    - ZoomVideoSDK/ZoomTask (= 2.6.0)
+    - ZoomVideoSDK/ZoomVideoSDK (= 2.6.0)
+  - nosmai_effects_sdk (2.0.3-beta.1):
+    - Flutter
+    - NosmaiCameraSDK (= 3.0.8-beta.1)
+  - nosmai_zoom_bridge (0.1.0):
+    - Flutter
+    - nosmai_effects_sdk
+    - nosmai_zoom_bridge/Core (= 0.1.0)
+    - nosmai_zoom_bridge/Neon64 (= 0.1.0)
+    - ZoomVideoSDK/ZoomVideoSDK (= 2.6.0)
+  - nosmai_zoom_bridge/Core (0.1.0):
+    - Flutter
+    - nosmai_effects_sdk
+    - ZoomVideoSDK/ZoomVideoSDK (= 2.6.0)
+  - nosmai_zoom_bridge/Neon64 (0.1.0):
+    - Flutter
+    - nosmai_effects_sdk
+    - ZoomVideoSDK/ZoomVideoSDK (= 2.6.0)
+  - NosmaiCameraSDK (3.0.8-beta.1)
+  - permission_handler_apple (9.4.8):
+    - Flutter
+  - ZoomVideoSDK/CptShare (2.6.0)
+  - ZoomVideoSDK/util (2.6.0)
+  - ZoomVideoSDK/Whiteboard (2.6.0)
+  - ZoomVideoSDK/zContext (2.6.0)
+  - ZoomVideoSDK/zm_annoter_dynamic (2.6.0)
+  - ZoomVideoSDK/zoomcml (2.6.0)
+  - ZoomVideoSDK/ZoomTask (2.6.0)
+  - ZoomVideoSDK/ZoomVideoSDK (2.6.0)
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - flutter_zoom_videosdk (from `.symlinks/plugins/flutter_zoom_videosdk/ios`)
+  - nosmai_effects_sdk (from `.symlinks/plugins/nosmai_effects_sdk/ios`)
+  - nosmai_zoom_bridge (from `.symlinks/plugins/nosmai_zoom_bridge/ios`)
+  - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
+
+SPEC REPOS:
+  trunk:
+    - NosmaiCameraSDK
+    - ZoomVideoSDK
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  flutter_zoom_videosdk:
+    :path: ".symlinks/plugins/flutter_zoom_videosdk/ios"
+  nosmai_effects_sdk:
+    :path: ".symlinks/plugins/nosmai_effects_sdk/ios"
+  nosmai_zoom_bridge:
+    :path: ".symlinks/plugins/nosmai_zoom_bridge/ios"
+  permission_handler_apple:
+    :path: ".symlinks/plugins/permission_handler_apple/ios"
+
+SPEC CHECKSUMS:
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  flutter_zoom_videosdk: 390a71c5de1c681b4f4c2ecc3d0c088eea410169
+  nosmai_effects_sdk: 815873efbabc83032331730d1a3566d6077439ca
+  nosmai_zoom_bridge: 49a12f2d3153cfa191edad202ddee0a3fb3f4e46
+  NosmaiCameraSDK: b6c12d0b5315a77f8f163096571fb80bbf03a811
+  permission_handler_apple: 92d754bbaa7361d436db2d6c3c1c2a0fdcec462e
+  ZoomVideoSDK: 9ec537e245a54bbd0bf89e53a478518f21eb6591
+
+PODFILE CHECKSUM: 11da9ff3319f740604c3a45b261d5eb4f1a87563
+
+COCOAPODS: 1.16.2
